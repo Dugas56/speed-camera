@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .switch {
+            display: inline-block;
+            position: relative;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        .value-container {
+            margin-top: 20px;
+            font-size: 24px;
+        }
+
+        #image,
+        #recentImage,
+        #aiImage {
+            width: 320px;
+            height: 240px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Control Panel</h1>
+    <button id="button1" class="button">Button 1</button>
+    <button id="button2" class="button">Button 2</button>
+    <label class="switch">
+        <input type="checkbox" id="switch1">
+        <span class="slider"></span>
+    </label>
+    <label class="switch">
+        <input type="checkbox" id="switch2">
+        <span class="slider"></span>
+    </label>
+    <button id="runScriptButton" class="button">Run Script on Pi</button>
+    <h1>Current Speed: <span id="currentSpeed">Loading...</span></h1>
+    <h2>Image Path: <span id="path">Loading...</span></h2>
+    <img id="image" alt="Speed Camera Image" />
+    <h2>Recent Image:</h2>
+    <img id="recentImage" alt="Recent Image" />
+    <h2>AI Image:</h2>
+    <div id="aiImageContainer">
+        <img id="aiImage" alt="AI Image" />
+        <p id="aiImageNotAvailable" style="display: none;">AI Image Not Available</p>
+    </div>
+    <button onclick="updateSpeed()">Update Speed</button>
+    <button onclick="nextRow()">Next Row</button>
+    <button onclick="prevRow()">Previous Row</button>
+    <button onclick="startSlideshow()">Start Slideshow</button>
+    <button onclick="stopSlideshow()">Stop Slideshow</button>
+
+    <script>
+        let offset = 0;
+        let intervalId = null;
+
+        // Function to fetch and update the speed value
+        function updateSpeed() {
+            fetch(`getspeed.php?offset=${offset}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('JSON data:', data);
+                    if (data.error) {
+                        console.error('Error:', data.error);
+                    } else {
+                        document.getElementById('currentSpeed').textContent = data.ave_speed;
+                        document.getElementById('path').textContent = data.image_path;
+                        const imagePath = data.image_path.replace(/\\/g, '');
+                        document.getElementById('image').src = imagePath;
+
+                        const recentImagePath = 'media/recent/' + imagePath.split('/').pop();
+                        document.getElementById('recentImage').src = recentImagePath;
+
+                        const aiImagePath = 'media/AI/' + imagePath.split('/').pop();
+                        checkImageExists(aiImagePath, function (exists) {
+                            if (exists) {
+                                document.getElementById('aiImage').src = aiImagePath;
+                                document.getElementById('aiImage').style.display = 'block';
+                                document.getElementById('aiImageNotAvailable').style.display = 'none';
+                            } else {
+                                document.getElementById('aiImage').style.display = 'none';
+                                document.getElementById('aiImageNotAvailable').style.display = 'block';
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // Function to fetch the next row
+        function nextRow() {
+            offset++;
+            updateSpeed();
+        }
+
+        // Function to fetch the previous row
+        function prevRow() {
+            if (offset > 0) {
+                offset--;
+                updateSpeed();
+            }
+        }
+
+        // AJAX call to execute a PHP script on the server
+        document.getElementById('runScriptButton').onclick = function () {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'runscript.php', true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    alert('Script executed successfully.');
+                } else {
+                    alert('Failed to execute script. Status code: ' + xhr.status);
+                }
+            };
+            xhr.send();
+        };
+
+        // Update speed value initially
+        updateSpeed();
+
+        // Function to start the automatic slideshow
+        function startSlideshow() {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            intervalId = setInterval(nextRow, 5000); // Adjust interval as needed
+        }
+
+        // Function to stop the automatic slideshow
+        function stopSlideshow() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        }
+
+        // Function to check if an image exists
+        function checkImageExists(url, callback) {
+            const img = new Image();
+            img.onload = () => callback(true);
+            img.onerror = () => callback(false);
+            img.src = url;
+        }
+    </script>
+</body>
+
+</html>
