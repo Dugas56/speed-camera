@@ -1,0 +1,17 @@
+data/*.db
+data/*.db-*
+media/ai/neg/**
+media/ai/pos/**
+media/graphs/**
+media/html/**
+media/images/**
+media/recent/**
+media/reports/**
+!data/.gitkeep
+!media/ai/neg/.gitkeep
+!media/ai/pos/.gitkeep
+!media/graphs/.gitkeep
+!media/html/.gitkeep
+!media/images/.gitkeep
+!media/recent/.gitkeep
+!media/reports/.gitkeep

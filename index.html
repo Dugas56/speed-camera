@@ -4,200 +4,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speed Display</title>
+    <title>Speed Camera</title>
     <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+            --ink: #172026;
+            --muted: #5f6b73;
+            --line: #d7dde2;
+            --panel: #f7f9fa;
+            --accent: #1f7a8c;
+            --danger: #a63446;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #ffffff;
+            color: var(--ink);
+        }
+
+        main {
+            width: min(1100px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0;
+        }
+
+        header {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 18px;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(28px, 6vw, 54px);
+            line-height: 1;
+            letter-spacing: 0;
+        }
+
+        .subtitle {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .status {
+            min-width: 180px;
+            text-align: right;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 22px;
+            align-items: start;
+        }
+
+        .image-frame {
+            min-height: 300px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+
+        .image-frame img {
+            display: block;
+            max-width: 100%;
+            max-height: 72vh;
+            width: auto;
+            height: auto;
+        }
+
+        .empty {
+            padding: 24px;
+            color: var(--muted);
             text-align: center;
         }
 
-        .button {
+        .speed {
+            font-size: 64px;
+            font-weight: 700;
+            line-height: 1;
+            margin: 0;
+        }
+
+        .speed span {
             display: inline-block;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            margin: 10px;
-        }
-
-        .switch {
-            display: inline-block;
-            position: relative;
-            width: 60px;
-            height: 34px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked+.slider {
-            background-color: #2196F3;
-        }
-
-        input:checked+.slider:before {
-            transform: translateX(26px);
-        }
-
-        .value-container {
-            margin-top: 20px;
             font-size: 24px;
+            color: var(--muted);
+            margin-left: 6px;
         }
 
-        #image,
-        #recentImage,
-        #aiImage {
-            width: 320px;
-            height: 240px;
+        dl {
+            display: grid;
+            grid-template-columns: 110px minmax(0, 1fr);
+            gap: 10px 14px;
+            margin: 24px 0;
+        }
+
+        dt {
+            color: var(--muted);
+        }
+
+        dd {
+            margin: 0;
+            word-break: break-word;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        button {
+            appearance: none;
+            border: 1px solid var(--line);
+            background: #ffffff;
+            color: var(--ink);
+            border-radius: 6px;
+            padding: 11px 12px;
+            min-height: 42px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .error {
+            color: var(--danger);
+        }
+
+        @media (max-width: 820px) {
+            header,
+            .layout {
+                display: block;
+            }
+
+            .status {
+                text-align: left;
+                margin-top: 12px;
+            }
+
+            aside {
+                margin-top: 20px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <h1>Control Panel</h1>
-    <button id="button1" class="button">Button 1</button>
-    <button id="button2" class="button">Button 2</button>
-    <label class="switch">
-        <input type="checkbox" id="switch1">
-        <span class="slider"></span>
-    </label>
-    <label class="switch">
-        <input type="checkbox" id="switch2">
-        <span class="slider"></span>
-    </label>
-    <button id="runScriptButton" class="button">Run Script on Pi</button>
-    <h1>Current Speed: <span id="currentSpeed">Loading...</span></h1>
-    <h2>Image Path: <span id="path">Loading...</span></h2>
-    <img id="image" alt="Speed Camera Image" />
-    <h2>Recent Image:</h2>
-    <img id="recentImage" alt="Recent Image" />
-    <h2>AI Image:</h2>
-    <div id="aiImageContainer">
-        <img id="aiImage" alt="AI Image" />
-        <p id="aiImageNotAvailable" style="display: none;">AI Image Not Available</p>
-    </div>
-    <button onclick="updateSpeed()">Update Speed</button>
-    <button onclick="nextRow()">Next Row</button>
-    <button onclick="prevRow()">Previous Row</button>
-    <button onclick="startSlideshow()">Start Slideshow</button>
-    <button onclick="stopSlideshow()">Stop Slideshow</button>
+    <main>
+        <header>
+            <div>
+                <h1>Speed Camera</h1>
+                <p class="subtitle">Raspberry Pi capture viewer</p>
+            </div>
+            <div id="status" class="status">Loading latest capture...</div>
+        </header>
+
+        <section class="layout">
+            <div id="imageFrame" class="image-frame">
+                <div class="empty">Waiting for the first Raspberry Pi capture.</div>
+            </div>
+
+            <aside>
+                <p class="speed"><span id="speedValue">--</span><span id="speedUnits"></span></p>
+
+                <dl>
+                    <dt>Captured</dt>
+                    <dd id="capturedAt">--</dd>
+                    <dt>Camera</dt>
+                    <dd id="cameraName">--</dd>
+                    <dt>Direction</dt>
+                    <dd id="direction">--</dd>
+                    <dt>Location</dt>
+                    <dd id="location">--</dd>
+                    <dt>Status</dt>
+                    <dd id="captureStatus">--</dd>
+                    <dt>Image</dt>
+                    <dd id="imagePath">--</dd>
+                </dl>
+
+                <div class="controls">
+                    <button class="primary" type="button" onclick="loadCapture(0)">Latest</button>
+                    <button type="button" onclick="refreshCurrent()">Refresh</button>
+                    <button type="button" onclick="previousCapture()">Newer</button>
+                    <button type="button" onclick="nextCapture()">Older</button>
+                </div>
+            </aside>
+        </section>
+    </main>
 
     <script>
         let offset = 0;
-        let intervalId = null;
 
-        // Function to fetch and update the speed value
-        function updateSpeed() {
-            fetch(`getspeed.php?offset=${offset}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('JSON data:', data);
-                    if (data.error) {
-                        console.error('Error:', data.error);
-                    } else {
-                        document.getElementById('currentSpeed').textContent = data.ave_speed;
-                        document.getElementById('path').textContent = data.image_path;
-                        const imagePath = data.image_path.replace(/\\/g, '');
-                        document.getElementById('image').src = imagePath;
-
-                        const recentImagePath = 'media/recent/' + imagePath.split('/').pop();
-                        document.getElementById('recentImage').src = recentImagePath;
-
-                        const aiImagePath = 'media/AI/' + imagePath.split('/').pop();
-                        checkImageExists(aiImagePath, function (exists) {
-                            if (exists) {
-                                document.getElementById('aiImage').src = aiImagePath;
-                                document.getElementById('aiImage').style.display = 'block';
-                                document.getElementById('aiImageNotAvailable').style.display = 'none';
-                            } else {
-                                document.getElementById('aiImage').style.display = 'none';
-                                document.getElementById('aiImageNotAvailable').style.display = 'block';
-                            }
-                        });
-                    }
-                })
-                .catch(error => console.error('Error fetching data:', error));
+        function text(id, value) {
+            document.getElementById(id).textContent = value || '--';
         }
 
-        // Function to fetch the next row
-        function nextRow() {
-            offset++;
-            updateSpeed();
-        }
+        function showImage(url, altText) {
+            const frame = document.getElementById('imageFrame');
+            frame.innerHTML = '';
 
-        // Function to fetch the previous row
-        function prevRow() {
-            if (offset > 0) {
-                offset--;
-                updateSpeed();
+            if (!url) {
+                frame.innerHTML = '<div class="empty">This record does not include an image path.</div>';
+                return;
             }
-        }
 
-        // AJAX call to execute a PHP script on the server
-        document.getElementById('runScriptButton').onclick = function () {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', 'runscript.php', true);
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    alert('Script executed successfully.');
-                } else {
-                    alert('Failed to execute script. Status code: ' + xhr.status);
-                }
-            };
-            xhr.send();
-        };
-
-        // Update speed value initially
-        updateSpeed();
-
-        // Function to start the automatic slideshow
-        function startSlideshow() {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-            intervalId = setInterval(nextRow, 5000); // Adjust interval as needed
-        }
-
-        // Function to stop the automatic slideshow
-        function stopSlideshow() {
-            if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
-            }
-        }
-
-        // Function to check if an image exists
-        function checkImageExists(url, callback) {
             const img = new Image();
-            img.onload = () => callback(true);
-            img.onerror = () => callback(false);
+            img.alt = altText || 'Speed camera capture';
+            img.onload = function () {
+                frame.innerHTML = '';
+                frame.appendChild(img);
+            };
+            img.onerror = function () {
+                frame.innerHTML = '<div class="empty error">Image file was not found on this web server.</div>';
+            };
             img.src = url;
         }
+
+        function render(data) {
+            text('speedValue', data.ave_speed === null ? '--' : Number(data.ave_speed).toFixed(1));
+            text('speedUnits', data.speed_units);
+            text('capturedAt', data.log_timestamp);
+            text('cameraName', data.camera);
+            text('direction', data.direction);
+            text('location', data.cam_location);
+            text('captureStatus', data.status);
+            text('imagePath', data.image_path);
+            showImage(data.image_url, data.image_path);
+            document.getElementById('status').className = 'status';
+            document.getElementById('status').textContent = offset === 0 ? 'Showing latest capture' : `Showing capture ${offset + 1}`;
+        }
+
+        function renderError(message) {
+            document.getElementById('status').className = 'status error';
+            document.getElementById('status').textContent = message;
+        }
+
+        function loadCapture(nextOffset) {
+            offset = Math.max(0, nextOffset);
+            fetch(`getspeed.php?offset=${offset}`, { cache: 'no-store' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        if (!response.ok || !data.ok) {
+                            throw new Error(data.error || 'Unable to load speed data.');
+                        }
+                        return data;
+                    });
+                })
+                .then(render)
+                .catch(function (error) {
+                    renderError(error.message);
+                });
+        }
+
+        function refreshCurrent() {
+            loadCapture(offset);
+        }
+
+        function nextCapture() {
+            loadCapture(offset + 1);
+        }
+
+        function previousCapture() {
+            loadCapture(offset - 1);
+        }
+
+        loadCapture(0);
+        setInterval(function () {
+            if (offset === 0) {
+                refreshCurrent();
+            }
+        }, 5000);
     </script>
 </body>
 
