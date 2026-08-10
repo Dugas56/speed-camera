@@ -1106,6 +1106,7 @@ def large_vehicles():
 
 @app.route("/calibrate", methods=["GET", "POST"])
 def calibrate():
+    require_admin()
     saved_mark = None
     if request.method == "POST":
         saved_mark = write_calibration_mark(
@@ -1261,7 +1262,25 @@ def index():
     latest_capture_id = str(latest_image.get("id", "")) if latest_image else ""
     log_tail = escape(str(status["log_tail"])) or "No detector log yet."
     admin_configured = bool(load_admin_config().get("ADMIN_PASSWORD_HASH"))
-    if session.get("speed_camera_admin"):
+    is_admin = bool(session.get("speed_camera_admin"))
+    internal_detail_html = (
+        f"""
+            <dt>Host</dt><dd>{cfg.get('REOLINK_HOST','')}</dd>
+            <dt>Stream</dt><dd>{cfg.get('REOLINK_STREAM','main')}</dd>
+            <dt>Auto rows</dt><dd>{status["rows"]}</dd>
+            <dt>Latest auto</dt><dd>{latest_detector_text}</dd>
+            <dt>Auto image</dt><dd>{latest_detector_image}</dd>
+            <dt>Calibration</dt><dd>{calibration_text}</dd>
+            <dt>Track hits</dt><dd>{runtime_cfg.get('MO_TRACK_EVENT_COUNT', 'Not set')}</dd>
+            <dt>Min object</dt><dd>{runtime_cfg.get('MO_MIN_AREA_PX', 'Not set')} px</dd>
+            <dt>Max jump</dt><dd>{runtime_cfg.get('MO_MAX_X_DIFF_PX', 'Not set')} px</dd>
+            <dt>Timeout</dt><dd>{runtime_cfg.get('MO_EVENT_TIMEOUT_SEC', 'Not set')} sec</dd>
+            <dt>Road box</dt><dd>{crop_text}</dd>
+        """
+        if is_admin else ""
+    )
+    protected_sidebar_html = ""
+    if is_admin:
         csrf_token = attr(session.get("speed_camera_csrf", ""))
         youtube = youtube_status()
         youtube_state = "Connected" if youtube["connected"] else ("Starting" if youtube["running"] else "Stopped")
@@ -1301,27 +1320,7 @@ def index():
             </form>
           </details>
         """
-    elif admin_configured:
-        admin_controls_html = f"""
-          <details class="mini-panel">
-            <summary>Admin controls</summary>
-            <p><a class="button secondary" href="{app_url()}">Camera app</a></p>
-            <form method="post" action="{app_url('admin/login')}">
-              <label>Admin password<input type="password" name="password" autocomplete="current-password" required></label>
-              <button class="setup-actions">Sign in</button>
-            </form>
-          </details>
-        """
-    else:
-        admin_controls_html = ""
-    body = f"""
-    <section class="capture-view">
-      <div class="live-layout">
-        <aside class="left-column">
-          <div class="capture-rail">
-            <div class="rail-head">Captures</div>
-            <ul class="capture-list">{list_html}</ul>
-          </div>
+        protected_sidebar_html = f"""
           <details class="mini-panel">
             <summary>Camera setup</summary>
             <p class="muted">Current RTSP:</p>
@@ -1347,6 +1346,29 @@ def index():
             <a class="button secondary" href="{app_url('calibrate')}">Open marker</a>
           </section>
           {admin_controls_html}
+        """
+    elif admin_configured:
+        protected_sidebar_html = f"""
+          <details class="mini-panel">
+            <summary>Admin controls</summary>
+            <p><a class="button secondary" href="{app_url()}">Camera app</a></p>
+            <form method="post" action="{app_url('admin/login')}">
+              <label>Admin password<input type="password" name="password" autocomplete="current-password" required></label>
+              <button class="setup-actions">Sign in</button>
+            </form>
+          </details>
+        """
+    else:
+        protected_sidebar_html = ""
+    body = f"""
+    <section class="capture-view">
+      <div class="live-layout">
+        <aside class="left-column">
+          <div class="capture-rail">
+            <div class="rail-head">Captures</div>
+            <ul class="capture-list">{list_html}</ul>
+          </div>
+          {protected_sidebar_html}
         </aside>
         <div class="photo-column">
           <div class="image-shell">
@@ -1372,22 +1394,12 @@ def index():
           <dl class="detail-grid">
             <dt>Captured</dt><dd id="detail-captured">Now</dd>
             <dt>Camera</dt><dd>{cfg.get('CAMERA_NAME','')}</dd>
-            <dt>Host</dt><dd>{cfg.get('REOLINK_HOST','')}</dd>
-            <dt>Stream</dt><dd>{cfg.get('REOLINK_STREAM','main')}</dd>
             <dt>Photo</dt><dd id="detail-file">Live camera</dd>
             <dt>Direction</dt><dd id="detail-direction"></dd>
             <dt>Status</dt><dd id="detail-status"></dd>
             <dt>Location</dt><dd id="detail-location">{cfg.get('CAMERA_NAME','')}</dd>
             <dt>Vehicle size</dt><dd id="detail-size"></dd>
-            <dt>Auto rows</dt><dd>{status["rows"]}</dd>
-            <dt>Latest auto</dt><dd>{latest_detector_text}</dd>
-            <dt>Auto image</dt><dd>{latest_detector_image}</dd>
-            <dt>Calibration</dt><dd>{calibration_text}</dd>
-            <dt>Track hits</dt><dd>{runtime_cfg.get('MO_TRACK_EVENT_COUNT', 'Not set')}</dd>
-            <dt>Min object</dt><dd>{runtime_cfg.get('MO_MIN_AREA_PX', 'Not set')} px</dd>
-            <dt>Max jump</dt><dd>{runtime_cfg.get('MO_MAX_X_DIFF_PX', 'Not set')} px</dd>
-            <dt>Timeout</dt><dd>{runtime_cfg.get('MO_EVENT_TIMEOUT_SEC', 'Not set')} sec</dd>
-            <dt>Road box</dt><dd>{crop_text}</dd>
+            {internal_detail_html}
           </dl>
           <p class="version-note">Live server updated {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ADT</p>
         </aside>
@@ -1513,6 +1525,7 @@ def capture_status_json():
 
 @app.route("/config", methods=["POST"])
 def save_config():
+    require_admin()
     values = {key: request.form.get(key, "") for key in ["CAMERA_NAME", "REOLINK_HOST", "REOLINK_USERNAME", "REOLINK_PASSWORD", "REOLINK_STREAM", "RTSP_URL"]}
     if not values["REOLINK_PASSWORD"]:
         values["REOLINK_PASSWORD"] = read_config().get("REOLINK_PASSWORD", "")
