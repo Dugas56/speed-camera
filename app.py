@@ -893,12 +893,6 @@ PAGE = """
     .rail-head{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:800;color:var(--muted)}
     .capture-list{list-style:none;margin:0;padding:8px;max-height:430px;overflow:auto}
     .capture-list li + li{margin-top:8px}
-    .night-watch{border:1px solid var(--line);border-radius:8px;background:#182023;color:#eef8f8;padding:12px}
-    .night-watch h2{margin:0 0 8px;font-size:1rem;color:#fff}
-    .night-watch p{margin:0 0 10px;color:#c9d5d3;font-size:.88rem}
-    .night-watch ul{list-style:none;margin:0;padding:0}
-    .night-watch li{padding:7px 0;border-top:1px solid #415052;font-size:.85rem}
-    .night-watch strong{color:#fff}
     .capture-pick{width:100%;display:block;text-align:left;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--ink);padding:10px;min-height:48px;cursor:pointer}
     .capture-pick:hover,.capture-pick.active{border-color:var(--green);background:#eef8f8}
     .capture-pick.over-limit{position:relative;border-color:#e0aaa3;background:#fff2f0}
@@ -1227,40 +1221,6 @@ def index():
         for r in capture_rows
     )
     current_speed = capture_speed(latest_image)
-    now = datetime.now()
-    tonight_start = now.replace(hour=18, minute=0, second=0, microsecond=0)
-    if now < tonight_start:
-        tonight_start -= timedelta(days=1)
-    tonight_rows = [
-        row for row in detector_rows
-        if (row_time := capture_datetime(row.get("created_at"))) and row_time >= tonight_start
-    ]
-    tonight_l2r = sum(str(row.get("direction", "")).upper() == "L2R" for row in tonight_rows)
-    tonight_r2l = sum(str(row.get("direction", "")).upper() == "R2L" for row in tonight_rows)
-    tonight_speeds = [
-        float(row["ave_speed"]) for row in tonight_rows
-        if isinstance(row.get("ave_speed"), (int, float)) or str(row.get("ave_speed") or "").replace(".", "", 1).isdigit()
-    ]
-    tonight_fastest = f"{max(tonight_speeds):.1f} kph" if tonight_speeds else "--"
-    latest_tonight_time = capture_datetime(tonight_rows[0]["created_at"]) if tonight_rows else None
-    quiet_for = (
-        f"Last pass {int((now - latest_tonight_time).total_seconds() // 60)} min ago"
-        if latest_tonight_time else "Quiet since 6 PM"
-    )
-    tonight_recent = "".join(
-        f"<li><strong>{escape(capture_short_datetime(row['created_at']))}</strong> "
-        f"{escape(capture_speed(row))} {escape(str(row.get('speed_units') or 'kph'))} "
-        f"{escape(str(row.get('direction') or ''))}</li>"
-        for row in tonight_rows[:3]
-    ) or "<li>No validated passes yet tonight.</li>"
-    tonight_html = f"""
-      <section class="night-watch">
-        <h2>Tonight's traffic</h2>
-        <p>{len(tonight_rows)} validated passes since 6 PM &middot; {tonight_l2r} L2R / {tonight_r2l} R2L</p>
-        <p>Fastest: <strong>{tonight_fastest}</strong> &middot; {escape(quiet_for)}</p>
-        <ul>{tonight_recent}</ul>
-      </section>
-    """
     status = detector_status()
     detector_label = "Running" if status["running"] else "Stopped"
     detector_class = "status-pill" if status["running"] else "status-pill warn"
@@ -1362,7 +1322,6 @@ def index():
             <div class="rail-head">Captures</div>
             <ul class="capture-list">{list_html}</ul>
           </div>
-          {tonight_html}
           <details class="mini-panel">
             <summary>Camera setup</summary>
             <p class="muted">Current RTSP:</p>
