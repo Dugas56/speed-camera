@@ -147,7 +147,13 @@ def strmcam():
         elif cam_name == 'usbcam' or cam_name == 'rtspcam':
             if cam_name == 'rtspcam':
                 cam_src = RTSPCAM_SRC
-                cam_title = cam_name.upper() + ' src=' + cam_src
+                cam_public_src = cam_src
+                if '://' in cam_public_src and '@' in cam_public_src:
+                    prefix, rest = cam_public_src.split('://', 1)
+                    auth, host_path = rest.split('@', 1)
+                    user = auth.split(':', 1)[0]
+                    cam_public_src = prefix + '://' + user + ':********@' + host_path
+                cam_title = cam_name.upper() + ' src=' + cam_public_src
             elif cam_name == 'usbcam':
                 cam_src = USBCAM_SRC
                 cam_title = cam_name.upper() + ' src=' + str(cam_src)

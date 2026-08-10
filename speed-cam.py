@@ -113,6 +113,7 @@ default_settings = {
     "MO_TRACK_TIMEOUT_SEC": 0.5,
     "MO_EVENT_TIMEOUT_SEC": 0.3,
     "MO_MAX_SPEED_OVER": 0,
+    "MO_MAX_VALID_SPEED": 0,
     "MO_CROP_AUTO_ON": False,
     "MO_CROP_X_LEFT": 50,
     "MO_CROP_X_RIGHT": 250,
@@ -1453,7 +1454,10 @@ def speed_camera():
                         tot_track_time = abs(track_start_time - cur_track_time)
                         if IM_FIRST_AND_LAST_ON or IM_SAVE_4AI_ON:
                             mo_im_last = image2
-                        if ave_speed > MO_MAX_SPEED_OVER or CALIBRATE_ON:
+                        if (
+                            (ave_speed > MO_MAX_SPEED_OVER or CALIBRATE_ON)
+                            and (MO_MAX_VALID_SPEED <= 0 or ave_speed <= MO_MAX_VALID_SPEED)
+                        ):
                             logging.info(
                                 " Add - %i/%i xy(%i,%i) %3.2f %s"
                                 " D=%i/%i C=%i %ix%i=%i sqpx %s",
@@ -1707,11 +1711,11 @@ def speed_camera():
                             # Note cam_location and status may not be in proper order
                             # Unless speed table is recreated.
                             try:
-                                sql_cmd = """insert into {} values {}""".format(
-                                    DB_TABLE, speed_data
+                                sql_cmd = "insert into {} values ({})".format(
+                                    DB_TABLE, ",".join(["?"] * len(speed_data))
                                 )
                                 db_conn = db_check(DB_PATH)
-                                db_conn.execute(sql_cmd)
+                                db_conn.execute(sql_cmd, speed_data)
                                 db_conn.commit()
                                 db_conn.close()
                             except sqlite3.Error as e:
@@ -1947,8 +1951,9 @@ def speed_camera():
                 )
                 cv2.imshow(cv2_window_speed_sign, image_sign_view)
 
-        # Close Window if q pressed
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        # Close Window if q pressed. Skip this in headless mode because
+        # opencv-python-headless does not implement waitKey/destroyAllWindows.
+        if GUI_WINDOW_ON and cv2.waitKey(1) & 0xFF == ord("q"):
             cv2.destroyAllWindows()
             logging.info("End Motion Tracking ......")
             vs.stop()

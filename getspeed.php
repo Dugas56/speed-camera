@@ -3,11 +3,19 @@ header('Content-Type: application/json');
 header('Cache-Control: no-store');
 
 $dbFile = __DIR__ . '/data/speed_cam.db';
+$maxVisibleSpeed = 80;
 $offset = filter_input(INPUT_GET, 'offset', FILTER_VALIDATE_INT);
+$limit = filter_input(INPUT_GET, 'limit', FILTER_VALIDATE_INT);
 
 if ($offset === false || $offset === null || $offset < 0) {
     $offset = 0;
 }
+
+if ($limit === false || $limit === null || $limit < 1) {
+    $limit = 1;
+}
+
+$limit = min($limit, 50);
 
 function respond($payload, $statusCode = 200)
 {
@@ -51,14 +59,17 @@ try {
     $stmt = $pdo->prepare(
         'SELECT idx, log_timestamp, camera, ave_speed, speed_units, image_path, direction, status, cam_location
          FROM speed
+         WHERE ave_speed IS NULL OR CAST(ave_speed AS REAL) <= :maxVisibleSpeed
          ORDER BY log_timestamp DESC, idx DESC
-         LIMIT 1 OFFSET :offset'
+         LIMIT :limit OFFSET :offset'
     );
+    $stmt->bindValue(':maxVisibleSpeed', $maxVisibleSpeed, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!$row) {
+    if (!$rows) {
         respond([
             'ok' => false,
             'error' => 'No speed records found for this offset.',
@@ -66,10 +77,18 @@ try {
         ], 404);
     }
 
-    $row['ave_speed'] = is_numeric($row['ave_speed']) ? (float) $row['ave_speed'] : null;
-    $row['image_url'] = webPath($row['image_path']);
-    $row['offset'] = $offset;
-    $row['ok'] = true;
+    foreach ($rows as $index => $row) {
+        $rows[$index]['ave_speed'] = is_numeric($row['ave_speed']) ? (float) $row['ave_speed'] : null;
+        $rows[$index]['image_url'] = webPath($row['image_path']);
+        $rows[$index]['offset'] = $offset + $index;
+        $rows[$index]['ok'] = true;
+    }
+
+    $row = $rows[0];
+
+    if ($limit > 1) {
+        $row['records'] = $rows;
+    }
 
     respond($row);
 } catch (PDOException $e) {

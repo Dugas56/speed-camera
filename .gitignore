@@ -1,5 +1,11 @@
 data/*.db
 data/*.db-*
+.codex-pydeps/
+tmp_live_large_review/
+__pycache__/
+config.py.pre-*.bak
+plugins/rtsp352.py
+plugins/__pycache__/
 media/ai/neg/**
 media/ai/pos/**
 media/graphs/**

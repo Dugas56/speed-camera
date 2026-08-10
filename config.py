@@ -108,6 +108,7 @@ MO_X_LR_SIDE_BUFF_PX = 10   # Default= 10 Divides motion Rect x for L&R Buffer S
 MO_TRACK_TIMEOUT_SEC = 0.5  # Default= 0.5 Optional seconds to wait after track End (Avoids dual tracking)
 MO_EVENT_TIMEOUT_SEC = 0.3  # Default= 0.3 seconds to wait for next motion event before starting new track
 MO_MAX_SPEED_OVER = 0       # Exclude track if Speed less than or equal to value specified 0=All
+MO_MAX_VALID_SPEED = 0      # Reject readings above this speed, 0=disabled
                             # Can be useful to exclude pedestrians and/or bikes, Etc or track only fast objects
 # Motion Tracking Window Crop Area Settings
 # -----------------------------------------
