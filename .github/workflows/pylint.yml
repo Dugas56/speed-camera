@@ -18,6 +18,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pylint
-    - name: Analysing the code with pylint
+    - name: Analyse code with blocking Pylint checks
       run: |
         pylint $(git ls-files '*.py')
+    - name: Report legacy webserver duplicate-code warnings
+      run: |
+        pylint --disable=all --enable=duplicate-code webserver.py webserver2.py || true
