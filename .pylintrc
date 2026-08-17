@@ -1,2 +1,5 @@
-[MAIN]
-exit-zero = yes
+[MESSAGES CONTROL]
+# Keep the known duplication between the two legacy webserver modules from
+# blocking CI. The workflow runs a separate non-blocking duplicate-code pass
+# so this warning remains visible for future cleanup.
+disable = duplicate-code
